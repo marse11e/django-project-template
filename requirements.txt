@@ -12,3 +12,4 @@ uritemplate
 django-import-export
 rest_framework_simplejwt
 djoser
+django-jazzmin
