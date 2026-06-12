@@ -1,9 +1,14 @@
 #!/bin/bash
-
 APPS_DIR="apps"
 SETTINGS_FILE="core/settings.py"
+declare -a APPS=()
 
-declare -a APPS=() 
+# Определяем параметры для sed -i в зависимости от ОС
+if [[ "$(uname)" == "Darwin" ]]; then
+    SED_INPLACE=(-i '')
+else
+    SED_INPLACE=(-i)
+fi
 
 while true; do
     read -p "Введите имя приложения (или 'exit' для завершения): " APP
@@ -16,11 +21,7 @@ done
 for APP in "${APPS[@]}"; do
     python3 manage.py startapp "$APP"
     mv "$APP" "$APPS_DIR/"
-
     APP_DIR="$APPS_DIR/$APP"
-
-    touch "$APP_DIR/urls.py"
-    touch "$APP_DIR/serializers.py"
 
     cat > "$APP_DIR/urls.py" <<EOL
 from django.urls import path
@@ -33,7 +34,6 @@ EOL
 
     cat > "$APP_DIR/serializers.py" <<EOL
 from rest_framework import serializers
-
 # Пример: class YourSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = YourModel
@@ -45,9 +45,8 @@ done
 
 for APP in "${APPS[@]}"; do
     APPS_FILE="$APPS_DIR/$APP/apps.py"
-
     if [ -f "$APPS_FILE" ]; then
-        sed -i "s/name = '.*'/name = 'apps.$APP'/g" "$APPS_FILE"
+        sed "${SED_INPLACE[@]}" "s/name = '.*'/name = 'apps.$APP'/g" "$APPS_FILE"
         echo "Изменён файл: $APPS_FILE"
     else
         echo "Файл не найден: $APPS_FILE"
@@ -56,12 +55,11 @@ done
 
 for APP in "${APPS[@]}"; do
     if ! grep -q "'apps.$APP'," "$SETTINGS_FILE"; then
-        sed -i "/^] + DEFAULT_INSTALLED_APPS/i\    'apps.$APP'," "$SETTINGS_FILE"
+        sed "${SED_INPLACE[@]}" "/^] + DEFAULT_INSTALLED_APPS/i\\
+    'apps.$APP',
+" "$SETTINGS_FILE"
         echo "Добавлено в INSTALLED_APPS: 'apps.$APP'"
     else
         echo "'apps.$APP' уже добавлено в INSTALLED_APPS"
     fi
 done
-
-
-
